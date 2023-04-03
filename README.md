@@ -19,4 +19,4 @@ A real-time trading dashboard that surfaces Discord trade alerts alongside inter
 
 - [ ] Phase 2 — Discord bot integration (real-time alert ingestion)
 - [ ] Phase 3 — Live price feed & functional charts
-<!-- updated: 2026-03-30-03 -->
+<!-- updated: 2023-04-03-r01 -->
