@@ -64,10 +64,19 @@ let currentTf = '1D';
 
 // ── Candlestick data generator ─────────────────────────────────────────────
 
+function priceFromAlert(item) {
+  if (item.price != null) return item.price;
+  if (item.priceLvl) {
+    const m = item.priceLvl.match(/([\d.]+)/);
+    if (m) return parseFloat(m[1]);
+  }
+  return 10;
+}
+
 function generateCandles(ticker, tf) {
   const seed = ticker.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const meta = ALERTS.find(a => a.ticker === ticker) || ALERTS[0];
-  const basePrice = meta.price;
+  const basePrice = priceFromAlert(meta);
 
   const tfConfig = {
     '1D':  { bars: 78,  step: 5 * 60,       startOffset: 6.5 * 3600 },
@@ -223,14 +232,19 @@ function updateStockCard(ticker) {
   const item = ALERTS.find(a => a.ticker === ticker);
   if (!item) return;
 
-  document.getElementById('selected-ticker').textContent  = item.ticker;
-  document.getElementById('selected-time').textContent    = item.time;
-  document.getElementById('selected-price').textContent   = `$${item.price.toFixed(2)}`;
-  document.getElementById('selected-pricelevel').textContent = item.priceLvl;
+  document.getElementById('selected-ticker').textContent     = item.ticker;
+  document.getElementById('selected-time').textContent       = item.time || '';
+  document.getElementById('selected-price').textContent      = item.priceLvl || (item.price != null ? `$${item.price.toFixed(2)}` : '—');
+  document.getElementById('selected-pricelevel').textContent = item.priceLvl || '';
 
   const pctEl = document.getElementById('selected-pct');
-  pctEl.textContent  = `+${item.pct}%`;
-  pctEl.className    = 'stock-pct positive';
+  if (item.pct != null) {
+    const sign = item.pct >= 0 ? '+' : '';
+    pctEl.textContent = `${sign}${item.pct}%`;
+    pctEl.className   = 'stock-pct ' + (item.pct >= 0 ? 'positive' : 'negative');
+  } else {
+    pctEl.textContent = '';
+  }
 
   document.getElementById('selected-float').textContent = item.float;
   document.getElementById('selected-rvol').textContent  = item.rvol;
@@ -265,11 +279,12 @@ function renderWatchlist() {
     const active = item.ticker === currentTicker ? ' active' : '';
     const cls    = item.pct >= 0 ? 'positive' : 'negative';
     const sign   = item.pct >= 0 ? '+' : '';
+    const displayPrice = item.priceLvl || (item.price != null ? `$${item.price.toFixed(2)}` : '—');
     return `
       <div class="watchlist-item${active}" onclick="selectWatchlistItem('${item.ticker}')">
         <span class="wl-ticker">${item.ticker}</span>
-        <span class="wl-price">$${item.price.toFixed(2)}</span>
-        <span class="wl-change ${cls}">${sign}${item.pct}%</span>
+        <span class="wl-price">${displayPrice}</span>
+        <span class="wl-change ${cls}">${item.pct != null ? sign + item.pct + '%' : ''}</span>
       </div>`;
   }).join('');
 }
@@ -293,7 +308,96 @@ document.querySelectorAll('.tf-btn').forEach(btn => {
   });
 });
 
+// ── Live Discord feed via SSE ──────────────────────────────────────────────
+
+const BACKEND = 'http://localhost:3001';
+
+function connectLiveFeed() {
+  const es = new EventSource(`${BACKEND}/events`);
+
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.type === 'init') {
+      // REST fetch already loaded latest alerts — skip SSE init to avoid reordering
+      return;
+    }
+
+    // New live alert — always switch to newest
+    upsertAlert(data);
+    loadTicker(ALERTS[0].ticker, currentTf);
+    renderWatchlist();
+    flashNewAlert(data.ticker);
+    playAlertSound();
+  };
+
+  es.onerror = () => {
+    // Backend not reachable — keep using mock data silently
+    es.close();
+  };
+}
+
+function upsertAlert(alert) {
+  const idx = ALERTS.findIndex(a => a.ticker === alert.ticker);
+  if (idx !== -1) {
+    ALERTS[idx] = { ...ALERTS[idx], ...alert };
+    // Move to top if it was updated
+    const [item] = ALERTS.splice(idx, 1);
+    ALERTS.unshift(item);
+  } else {
+    ALERTS.unshift(alert);
+    if (ALERTS.length > 20) ALERTS.pop();
+  }
+}
+
+function playAlertSound() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(880, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+function flashNewAlert(ticker) {
+  setTimeout(() => {
+    const items = document.querySelectorAll('.watchlist-item');
+    items.forEach(el => {
+      if (el.querySelector('.wl-ticker')?.textContent === ticker) {
+        el.style.transition = 'background 0.1s';
+        el.style.background = 'rgba(201,162,39,0.25)';
+        setTimeout(() => el.style.background = '', 600);
+      }
+    });
+  }, 50);
+}
+
 // ── Boot ───────────────────────────────────────────────────────────────────
 
-renderWatchlist();
-initCharts();
+// Try real alerts first, fall back to mock if backend unreachable
+fetch(`${BACKEND}/alerts`)
+  .then(r => r.json())
+  .then(data => {
+    if (data.length) {
+      ALERTS.length = 0;
+      const seen = new Set();
+      data.forEach(a => {
+        if (!seen.has(a.ticker)) {
+          seen.add(a.ticker);
+          ALERTS.push(a);
+        }
+      });
+    }
+  })
+  .catch(() => {})
+  .finally(() => {
+    currentTicker = ALERTS[0].ticker;
+    renderWatchlist();
+    initCharts();
+    connectLiveFeed();
+  });
