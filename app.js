@@ -310,7 +310,9 @@ document.querySelectorAll('.tf-btn').forEach(btn => {
 
 // ── Live Discord feed via SSE ──────────────────────────────────────────────
 
-const BACKEND = 'http://localhost:3001';
+const BACKEND = window.location.hostname === 'localhost'
+  ? 'http://localhost:3001'
+  : 'https://flowdesk-backend-production.up.railway.app';
 
 function connectLiveFeed() {
   const es = new EventSource(`${BACKEND}/events`);
