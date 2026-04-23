@@ -321,13 +321,8 @@ function connectLiveFeed() {
 
   es.onmessage = (e) => {
     const data = JSON.parse(e.data);
+    if (data.type === 'init') return;
 
-    if (data.type === 'init') {
-      // REST fetch already loaded latest alerts — skip SSE init to avoid reordering
-      return;
-    }
-
-    // New live alert — always switch to newest
     upsertAlert(data);
     loadTicker(ALERTS[0].ticker, currentTf);
     renderWatchlist();
@@ -336,8 +331,8 @@ function connectLiveFeed() {
   };
 
   es.onerror = () => {
-    // Backend not reachable — keep using mock data silently
     es.close();
+    setTimeout(connectLiveFeed, 5000);
   };
 }
 
@@ -354,14 +349,25 @@ function upsertAlert(alert) {
   }
 }
 
+let _audioUnlocked = false;
+document.addEventListener('click', () => {
+  if (_audioUnlocked || !window.speechSynthesis) return;
+  _audioUnlocked = true;
+  const u = new SpeechSynthesisUtterance('');
+  u.volume = 0;
+  window.speechSynthesis.speak(u);
+}, { once: true });
+
 function playAlertSound(ticker) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(ticker.split('').join(' '));
-  utter.rate  = 0.9;
-  utter.pitch = 1.1;
-  utter.volume = 1;
-  window.speechSynthesis.speak(utter);
+  setTimeout(() => {
+    const utter = new SpeechSynthesisUtterance(ticker.split('').join(' '));
+    utter.rate   = 0.9;
+    utter.pitch  = 1.1;
+    utter.volume = 1;
+    window.speechSynthesis.speak(utter);
+  }, 50);
 }
 
 function flashNewAlert(ticker) {
