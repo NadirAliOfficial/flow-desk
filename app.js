@@ -349,25 +349,58 @@ function upsertAlert(alert) {
   }
 }
 
-let _audioUnlocked = false;
-document.addEventListener('click', () => {
-  if (_audioUnlocked || !window.speechSynthesis) return;
-  _audioUnlocked = true;
-  const u = new SpeechSynthesisUtterance('');
-  u.volume = 0;
-  window.speechSynthesis.speak(u);
-}, { once: true });
+// ── Audio ──────────────────────────────────────────────────────────────────
+
+let _audioCtx = null;
+let _soundEnabled = false;
+
+function initAudio() {
+  if (_soundEnabled) return;
+  _soundEnabled = true;
+  _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  // Unlock speech synthesis
+  if (window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+  }
+  const btn = document.getElementById('sound-toggle');
+  if (btn) { btn.classList.add('active'); btn.title = 'Sound ON'; }
+}
 
 function playAlertSound(ticker) {
+  if (!_soundEnabled || !_audioCtx) return;
+
+  // Beep: two-tone chime
+  const ctx = _audioCtx;
+  [880, 660].forEach((freq, i) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + i * 0.12;
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc.start(t);
+    osc.stop(t + 0.25);
+  });
+
+  // Speak ticker letters
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  setTimeout(() => {
-    const utter = new SpeechSynthesisUtterance(ticker.split('').join(' '));
-    utter.rate   = 0.9;
-    utter.pitch  = 1.1;
-    utter.volume = 1;
-    window.speechSynthesis.speak(utter);
-  }, 50);
+  const doSpeak = () => {
+    const u = new SpeechSynthesisUtterance(ticker.split('').join(' '));
+    u.rate = 0.85; u.pitch = 1.0; u.volume = 1;
+    window.speechSynthesis.speak(u);
+  };
+  if (window.speechSynthesis.getVoices().length > 0) {
+    setTimeout(doSpeak, 280);
+  } else {
+    window.speechSynthesis.addEventListener('voiceschanged', () => setTimeout(doSpeak, 280), { once: true });
+  }
 }
 
 function flashNewAlert(ticker) {

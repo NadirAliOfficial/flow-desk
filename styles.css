@@ -251,6 +251,11 @@ body::after {
   background: var(--surface2);
 }
 
+.sound-btn.active svg path,
+.sound-btn.active svg #sound-waves {
+  stroke: var(--gold-light);
+}
+
 .watchlist-items {
   flex: 1;
   overflow-y: auto;
