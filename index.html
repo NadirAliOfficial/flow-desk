@@ -8,7 +8,12 @@
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
-  <div class="app">
+  <div id="loading-screen" style="position:fixed;inset:0;background:#0d0d0f;display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:12px">
+  <div style="font-size:22px;font-weight:700;color:#c9a227;letter-spacing:2px">FLOWDESK</div>
+  <div style="width:40px;height:2px;background:#c9a227;animation:ld 1s ease-in-out infinite alternate;transform-origin:left"></div>
+  <style>@keyframes ld{from{transform:scaleX(0.2)}to{transform:scaleX(1)}}</style>
+</div>
+<div class="app">
     <!-- Left Sidebar -->
     <aside class="sidebar">
       <!-- Stock Info Card -->

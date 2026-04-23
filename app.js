@@ -2,7 +2,9 @@
 // Structure mirrors NuntioBot Discord alert format:
 // ticker, price level, % change, float, rvol, vol, theme, io, mc, si, flags
 
-const ALERTS = [
+const ALERTS = [];
+
+const _MOCK_ALERTS = [
   {
     ticker: 'ENVB',  time: '07:33', price: 4.21,  priceLvl: '< $5',
     pct: +147, nhod: true,  halted: false, flags: ['NHOD'],
@@ -381,20 +383,20 @@ function flashNewAlert(ticker) {
 fetch(`${BACKEND}/alerts`)
   .then(r => r.json())
   .then(data => {
-    if (data.length) {
-      ALERTS.length = 0;
-      const seen = new Set();
-      data.forEach(a => {
-        if (!seen.has(a.ticker)) {
-          seen.add(a.ticker);
-          ALERTS.push(a);
-        }
-      });
-    }
+    const seen = new Set();
+    (data.length ? data : _MOCK_ALERTS).forEach(a => {
+      if (!seen.has(a.ticker)) {
+        seen.add(a.ticker);
+        ALERTS.push(a);
+      }
+    });
   })
-  .catch(() => {})
+  .catch(() => {
+    _MOCK_ALERTS.forEach(a => ALERTS.push(a));
+  })
   .finally(() => {
-    currentTicker = ALERTS[0].ticker;
+    document.getElementById('loading-screen').style.display = 'none';
+    currentTicker = ALERTS[0]?.ticker || 'ENVB';
     renderWatchlist();
     initCharts();
     connectLiveFeed();
