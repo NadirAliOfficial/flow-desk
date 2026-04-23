@@ -328,7 +328,7 @@ function connectLiveFeed() {
     loadTicker(ALERTS[0].ticker, currentTf);
     renderWatchlist();
     flashNewAlert(data.ticker);
-    playAlertSound();
+    playAlertSound(data.ticker);
   };
 
   es.onerror = () => {
@@ -350,18 +350,14 @@ function upsertAlert(alert) {
   }
 }
 
-function playAlertSound() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.frequency.setValueAtTime(880, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
-  gain.gain.setValueAtTime(0.3, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.3);
+function playAlertSound(ticker) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(ticker.split('').join(' '));
+  utter.rate  = 0.9;
+  utter.pitch = 1.1;
+  utter.volume = 1;
+  window.speechSynthesis.speak(utter);
 }
 
 function flashNewAlert(ticker) {

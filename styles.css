@@ -426,3 +426,62 @@ body::after {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; }
+
+  .app {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    padding: 8px;
+    gap: 8px;
+    overflow: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .watchlist-card {
+    max-height: 280px;
+  }
+
+  .main {
+    flex: unset;
+    width: 100%;
+  }
+
+  .chart-card:first-child {
+    height: 380px;
+    flex: unset;
+  }
+
+  .chart-container {
+    height: 280px;
+  }
+
+  .tradingview-card {
+    height: 160px;
+  }
+
+  .volume-chart-container {
+    height: 100px;
+  }
+
+  .sc-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .timeframe-bar {
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+
+  .tf-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
