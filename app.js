@@ -357,9 +357,9 @@ let _soundEnabled = false;
 function initAudio() {
   if (_soundEnabled) return;
   _soundEnabled = true;
+  localStorage.setItem('fd_sound', '1');
   _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (_audioCtx.state === 'suspended') _audioCtx.resume();
-  // Unlock speech synthesis
   if (window.speechSynthesis) {
     const u = new SpeechSynthesisUtterance('');
     u.volume = 0;
@@ -367,6 +367,19 @@ function initAudio() {
   }
   const btn = document.getElementById('sound-toggle');
   if (btn) { btn.classList.add('active'); btn.title = 'Sound ON'; }
+}
+
+// Auto-restore sound preference on load
+if (localStorage.getItem('fd_sound') === '1') {
+  // Show button as active immediately so user knows sound is set to ON
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('sound-toggle');
+    if (btn) { btn.classList.add('active'); btn.title = 'Sound ON'; }
+  });
+  // Unlock audio on first any interaction (browser still requires one gesture)
+  ['click', 'keydown', 'touchstart'].forEach(e =>
+    document.addEventListener(e, initAudio, { once: true })
+  );
 }
 
 function playAlertSound(ticker) {
