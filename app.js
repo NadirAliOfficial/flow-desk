@@ -392,8 +392,8 @@ function playAlertSound(ticker) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const doSpeak = () => {
-    const u = new SpeechSynthesisUtterance(ticker.split('').join(' '));
-    u.rate = 0.85; u.pitch = 1.0; u.volume = 1;
+    const u = new SpeechSynthesisUtterance(ticker.split('').join('  '));
+    u.rate = 0.65; u.pitch = 1.0; u.volume = 1;
     window.speechSynthesis.speak(u);
   };
   if (window.speechSynthesis.getVoices().length > 0) {
