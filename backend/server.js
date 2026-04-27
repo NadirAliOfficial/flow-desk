@@ -10,11 +10,33 @@ app.use(express.json());
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID    = process.env.CHANNEL_ID || '936597136764727320';
-const POLL_INTERVAL = 2500; // ms
+const POLL_INTERVAL = 12000; // ms — slow enough to avoid detection
 
 let lastMessageId = null;
-let alerts        = [];      // latest 50 alerts in memory
+let alerts        = [];
 const sseClients  = new Set();
+
+function discordHeaders() {
+  return {
+    'Authorization': DISCORD_TOKEN,
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0.0; SM-G955U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36',
+    'Accept': '*/*',
+    'Accept-Language': 'en-GB,en;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'X-Discord-Locale': 'en-US',
+    'X-Discord-Timezone': 'Asia/Karachi',
+    'X-Debug-Options': 'bugReporterEnabled',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
+    'Referer': `https://discord.com/channels/936597136764727316/${CHANNEL_ID}`,
+  };
+}
+
+// Random jitter so requests don't fire on a fixed clock
+function jitter() {
+  return Math.floor(Math.random() * 4000); // 0–4s extra
+}
 
 // ── Discord polling ────────────────────────────────────────────────────────
 
@@ -27,11 +49,7 @@ async function pollDiscord() {
       `https://discord.com/api/v9/channels/${CHANNEL_ID}/messages`,
       {
         params,
-        headers: {
-          Authorization: DISCORD_TOKEN,
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'X-Discord-Locale': 'en-US',
-        },
+        headers: discordHeaders(),
       }
     );
 
@@ -106,10 +124,7 @@ app.listen(PORT, () => console.log(`FlowDesk backend running on port ${PORT}`));
     const res = await axios.get(
       `https://discord.com/api/v9/channels/${CHANNEL_ID}/messages?limit=50`,
       {
-        headers: {
-          Authorization: DISCORD_TOKEN,
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        },
+        headers: discordHeaders(),
       }
     );
 
@@ -129,5 +144,9 @@ app.listen(PORT, () => console.log(`FlowDesk backend running on port ${PORT}`));
   } catch (e) {
     console.error('[boot error]', e.message);
   }
-  setInterval(pollDiscord, POLL_INTERVAL);
+  const schedulePoll = () => setTimeout(async () => {
+    await pollDiscord();
+    schedulePoll();
+  }, POLL_INTERVAL + jitter());
+  schedulePoll();
 })();
