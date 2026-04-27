@@ -24,7 +24,7 @@ function discordHeaders() {
     'Accept-Language': 'en-GB,en;q=0.8',
     'Accept-Encoding': 'gzip, deflate, br',
     'X-Discord-Locale': 'en-US',
-    'X-Discord-Timezone': 'Asia/Karachi',
+    'X-Discord-Timezone': 'Asia/Dubai',
     'X-Debug-Options': 'bugReporterEnabled',
     'Sec-Fetch-Dest': 'empty',
     'Sec-Fetch-Mode': 'cors',
