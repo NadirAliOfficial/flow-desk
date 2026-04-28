@@ -62,7 +62,7 @@ let candleSeries = null;
 let volumeChart = null;
 let volBarSeries = null;
 let currentTicker = 'ENVB';
-let currentTf = '1D';
+let currentTf = '1M';
 
 // ── Candlestick data generator ─────────────────────────────────────────────
 
